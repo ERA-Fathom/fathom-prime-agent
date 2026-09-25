@@ -1,0 +1,13 @@
+{
+  "name": "fathom-prime-agent",
+  "version": "0.1.0",
+  "description": "Read Prime Agent sessions with the fathom read.",
+  "license": "MIT",
+  "keywords": ["prime-agent-package"],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
