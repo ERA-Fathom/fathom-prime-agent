@@ -1,7 +1,7 @@
 {
-  "name": "fathom-prime-agent",
-  "version": "0.1.0",
-  "description": "Read Prime Agent sessions with the fathom read.",
+  "name": "right-rudder-prime-agent",
+  "version": "0.2.0",
+  "description": "Read Prime Agent sessions with the Right Rudder read.",
   "license": "MIT",
   "keywords": ["prime-agent-package"],
   "peerDependencies": {

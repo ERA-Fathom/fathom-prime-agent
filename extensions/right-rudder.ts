@@ -1,30 +1,30 @@
 /**
- * fathom for Prime Agent: read the orchestrator's session as it runs.
+ * Right Rudder for Prime Agent: read the orchestrator's session as it runs.
  *
- * At each turn_end the extension maps the orchestrator's live branch to fathom ops, calls the fathom read
+ * At each turn_end the extension maps the orchestrator's live branch to Right Rudder ops, calls the right-rudder read
  * (POST /v1/read), and records the verdict in the session with pi.appendEntry("fathom", ...). It never changes
  * what the agent sees or does.
  *
- * What it maps (the same mapping as the Python reader, `prime-fathom read`, over the orchestrator's session):
+ * What it maps (the same mapping as the Python reader, `prime-right-rudder read`, over the orchestrator's session):
  *   - a file an ipython cell writes                  -> set  file <path>
- *   - a skill call matching FATHOM_WRITES            -> set  <kind> <key>
+ *   - a skill call matching RIGHT_RUDDER_WRITES            -> set  <kind> <key>
  *   - a git_state change                             -> add / set file <path>
  *   - a message a child delivers                     -> set  report "<child>: <message>"
  *   - an "[agent-message from <child>]" header in the orchestrator's own text, with no delivery from that child
  *     carrying the same message anywhere in the session
  *                                                    -> answer citing that report: the read flags it, because
  *                                                       the text claims a message that was never delivered
- *   - named facts (FATHOM_FACTS) in received messages and in a compaction summary's current-state section
+ *   - named facts (RIGHT_RUDDER_FACTS) in received messages and in a compaction summary's current-state section
  *                                                    -> answer ops citing them
  *
- * Configuration (environment, all optional):
- *   FATHOM_MODE      observe (default) | off
- *   FATHOM_ENDPOINT  service base URL, default https://read.embeddedriskanalytics.com
- *   FATHOM_API_KEY   a free key from POST /v1/keys; without one the anonymous limit applies
- *   FATHOM_FACTS     regex naming the facts your agents track, e.g. e\d+
- *   FATHOM_KIND      op kind for those facts (default "fact")
- *   FATHOM_WRITES    JSON [{"regex": "...(?<key>...)...(?<value>...)", "kind": "..."}] for skill calls that commit facts
- *   FATHOM_SEED_OPS  path to a JSON op list committed before the session began
+ * Configuration (environment, all optional; the FATHOM_ names still read as fallbacks):
+ *   RIGHT_RUDDER_MODE      observe (default) | off
+ *   RIGHT_RUDDER_ENDPOINT  service base URL, default https://read.embeddedriskanalytics.com
+ *   RIGHT_RUDDER_API_KEY   a free key from POST /v1/keys; without one the anonymous limit applies
+ *   RIGHT_RUDDER_FACTS     regex naming the facts your agents track, e.g. e\d+
+ *   RIGHT_RUDDER_KIND      op kind for those facts (default "fact")
+ *   RIGHT_RUDDER_WRITES    JSON [{"regex": "...(?<key>...)...(?<value>...)", "kind": "..."}] for skill calls that commit facts
+ *   RIGHT_RUDDER_SEED_OPS  path to a JSON op list committed before the session began
  */
 import { existsSync, readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -68,10 +68,10 @@ const FILE_REF = /(?<![\w/.-])((?:[\w.-]+\/)*[\w.-]+\.[A-Za-z0-9]{1,8})(?![\w/-]
 const CURRENT_LABEL = /^(\s*)(#+\s*|[-*]\s+)?\**\s*current\b[^\n]{0,40}?\b(?:state|values?)\b/i;
 
 export function configFromEnv(env = process.env): MapConfig {
-	const writes = env.FATHOM_WRITES ? (JSON.parse(env.FATHOM_WRITES) as { regex: string; kind: string }[]) : [];
+	const writes = (env.RIGHT_RUDDER_WRITES ?? env.FATHOM_WRITES) ? (JSON.parse((env.RIGHT_RUDDER_WRITES ?? env.FATHOM_WRITES)) as { regex: string; kind: string }[]) : [];
 	return {
-		facts: env.FATHOM_FACTS ? new RegExp(env.FATHOM_FACTS) : undefined,
-		kind: env.FATHOM_KIND || "fact",
+		facts: (env.RIGHT_RUDDER_FACTS ?? env.FATHOM_FACTS) ? new RegExp((env.RIGHT_RUDDER_FACTS ?? env.FATHOM_FACTS)) : undefined,
+		kind: (env.RIGHT_RUDDER_KIND ?? env.FATHOM_KIND) || "fact",
 		writes: writes.map((w) => ({ re: new RegExp(w.regex, "g"), kind: w.kind })),
 	};
 }
@@ -312,9 +312,9 @@ export function liveBranch(entries: Entry[]): Entry[] {
 }
 
 export async function read(ops: Op[], env = process.env): Promise<any> {
-	const base = (env.FATHOM_ENDPOINT || "https://read.embeddedriskanalytics.com").replace(/\/+$/, "");
+	const base = ((env.RIGHT_RUDDER_ENDPOINT ?? env.FATHOM_ENDPOINT) || "https://read.embeddedriskanalytics.com").replace(/\/+$/, "");
 	// without a key the read runs at the anonymous ("demo") limit
-	const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${env.FATHOM_API_KEY || "demo"}` };
+	const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${(env.RIGHT_RUDDER_API_KEY ?? env.FATHOM_API_KEY) || "demo"}` };
 	const r = await fetch(`${base}/v1/read`, { method: "POST", headers, body: JSON.stringify({ ops, supersede: [] }) });
 	const out = await r.json().catch(() => ({}));
 	if (!r.ok) throw new Error(`/v1/read ${r.status}: ${JSON.stringify(out).slice(0, 200)}`);
@@ -322,7 +322,7 @@ export async function read(ops: Op[], env = process.env): Promise<any> {
 }
 
 export function seedOps(env = process.env): Op[] {
-	const p = env.FATHOM_SEED_OPS;
+	const p = (env.RIGHT_RUDDER_SEED_OPS ?? env.FATHOM_SEED_OPS);
 	return p && existsSync(p) ? (JSON.parse(readFileSync(p, "utf8")) as Op[]) : [];
 }
 
@@ -331,8 +331,8 @@ export function isChildSession(ctx: any): boolean {
 	return Boolean(h?.parentSession) || Number(h?.rlmDepth ?? 0) > 0;
 }
 
-export default function fathom(pi: ExtensionAPI) {
-	if ((process.env.FATHOM_MODE || "observe").toLowerCase() === "off") return;
+export default function rightRudder(pi: ExtensionAPI) {
+	if ((((process.env.RIGHT_RUDDER_MODE ?? process.env.FATHOM_MODE) ?? process.env.FATHOM_MODE) || "observe").toLowerCase() === "off") return;
 	const cfg = configFromEnv();
 	const seed = seedOps();
 	let turn = 0;

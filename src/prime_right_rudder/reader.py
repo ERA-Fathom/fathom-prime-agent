@@ -1,4 +1,4 @@
-"""Prime Agent sessions as a fathom op stream.
+"""Prime Agent sessions as a Right Rudder op stream.
 
 load_session(path) walks the root session along its live branch, finds the child sessions it spawned, and
 merges every stream into one op list in time order. Each op's `source` names where it came from: `root`,
@@ -31,12 +31,12 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Pattern, Tuple
 
 try:
-    from fathom_read.ops import Op
+    from right_rudder.ops import Op
 except ImportError:  # pragma: no cover
     from dataclasses import asdict
 
     @dataclass
-    class Op:  # the fathom op contract, for use without fathom-read installed
+    class Op:  # the Right Rudder op contract, for use without right-rudder installed
         op: str
         kind: str
         key: str
