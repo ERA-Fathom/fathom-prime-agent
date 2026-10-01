@@ -98,3 +98,8 @@ the extension.
 ## License
 
 MIT
+
+
+---
+
+If the read caught something in your own run, a star on this repository helps other teams find it.
